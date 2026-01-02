@@ -1,5 +1,9 @@
-from scipy.stats import skew, pearsonr
+from scipy.stats import skew, pearsonr, jarque_bera
+from sklearn.preprocessing import PowerTransformer
+from statsmodels.tsa.stattools import adfuller
+from scipy.stats.mstats import winsorize
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 import seaborn as sns
 import pandas as pd
 import platform
@@ -36,7 +40,7 @@ def load_data(data_path):
     return None
 
 # EDA 1: 시제별 zero ratio 확인
-def check_zero_ratio_by_tense(df: pd.DataFrame, ticker_name: str):
+def check_zero_ratio_by_tense(df:pd.DataFrame, ticker_name:str):
     print(f"--- Analyzing {ticker_name} ---")
 
     zero_ratio_by_tesnse = []
@@ -73,7 +77,7 @@ def check_zero_ratio_by_tense(df: pd.DataFrame, ticker_name: str):
     plt.show()
 
 # EDA 2: 시제별 데이터 비율
-def check_data_ratio_by_tense(df: pd.DataFrame, ticker_name: str):
+def check_data_ratio_by_tense(df:pd.DataFrame, ticker_name:str):
     # 시제별 분포 가 한쪽으로 치우쳐져 있지 않은가?
     # past + present, future 각각의 비율을 시각화하여 확인.
     print(f"--- Analyzing {ticker_name} ---")
@@ -125,7 +129,7 @@ def check_data_ratio_by_tense(df: pd.DataFrame, ticker_name: str):
     plt.show()
 
 # EDA 3: 두 feature 분포 비교
-def compare_distributions(df: pd.DataFrame, ticker_name: str, col1: str, col2: str):
+def compare_distributions(df:pd.DataFrame, ticker_name:str, col1:str, col2:str):
     # Score_past
     # var: 0.15 ~ 0.18
     # Score_future
@@ -190,7 +194,7 @@ def compare_distributions(df: pd.DataFrame, ticker_name: str, col1: str, col2: s
     plt.show()
 
 # EDA 4: feature 간의 상관구조 분석
-def check_correlation_two_features(df: pd.DataFrame, ticker_name: str, col1:str, col2: str):
+def check_correlation_two_features(df:pd.DataFrame, ticker_name:str, col1:str, col2:str):
     # 상관계수 0.45 ~ 0.76 -> 어느정도 경향성이 같기도 하지만, 다른 정보도 상당 부분 존재함.
     # --- Analyzing HD현대중공업 ---
     # Correlation Coefficient (r): 0.7689
@@ -227,7 +231,7 @@ def check_correlation_two_features(df: pd.DataFrame, ticker_name: str, col1:str,
     )
 
     # 4. Styling & Text
-    plt.title(f'Correlation Analysis({ticker_name})', fontsize=15, fontweight='bold', pad=15)
+    plt.title(f'Correlation Analysis ({ticker_name})', fontsize=15, fontweight='bold', pad=15)
     plt.xlabel(f'{col1}', fontsize=12)
     plt.ylabel(f'{col2}', fontsize=12)
 
@@ -262,6 +266,170 @@ def check_correlation_two_features(df: pd.DataFrame, ticker_name: str, col1:str,
     plt.tight_layout()
     plt.show()
 
+# EDA 5: 피처별 분포 분석 (JB Test)
+def check_normality_jb(df:pd.DataFrame, ticker_name:str):
+    """피처별 왜도, 첨도를 분석"""
+    # --- Analyzing Normality (Q-Q Plot) for HD현대중공업 ---
+    # Candle_body_length: skewness: 0.316 , Excess Kurtosis: 0.912 -> 약한 fat tail
+    # High_low_length: skewness: 1.298 -> highly skewed(pos), Excess Kurtosis: 2.391 -> 뚜렷한 fat tail
+    # Score_past: skewness: -0.294, Excess Kurtosis: -0.524
+    # Score_future: skewness: -0.487, Excess Kurtosis: -0.241
+    # Score_total: skewness: -0.363, Excess Kurtosis: -0.389
+    # --- Analyzing Normality (Q-Q Plot) for LIG넥스원 ---
+    # Candle_body_length: skewness: -0.265, Excess Kurtosis: 1.27 -> 뚜렷한 fat tail
+    # High_low_length: skewness: 1.54 -> highly skewed(pos), Excess Kurtosis: 3.208 -> highly fat tail
+    # Score_past: skewness: -0.763, Excess Kurtosis: 0.078
+    # Score_future: skewness: -1.295 -> highly skewed(neg), Excess Kurtosis: 1.397 -> 뚜렷한 fat tail
+    # Score_total: skewness: -0.855, Excess Kurtosis: 0.094
+    # --- Analyzing Normality (Q-Q Plot) for 한국항공우주 ---
+    # Candle_body_length: skewness: -0.415, Excess Kurtosis: 2.404 -> 뚜렷한 fat tail
+    # High_low_length: skewness: 1.770 -> highly skewed(pos), Excess Kurtosis: 5.075 -> highly fat tail
+    # Score_past: skewness: -0.761, Excess Kurtosis: 0.359
+    # Score_future: skewness: -1.318 -> highly skewed(neg), Excess Kurtosis: 1.478 -> 뚜렷한 fat tail
+    # Score_total: skewness: -0.878, Excess Kurtosis: 0.571
+    # --- Analyzing Normality (Q-Q Plot) for 한화시스템 ---
+    # Candle_body_length: skewness: 0.341, Excess Kurtosis: 3.656 -> highly fat tail
+    # High_low_length: skewness: 2.010 -> highly skewed(pos), Excess Kurtosis: 6.177 -> highly fat tail
+    # Score_past: skewness: -0.715, Excess Kurtosis: 0.281
+    # Score_future: skewness: -1.122 -> highly skewed(neg), Excess Kurtosis: 1.331 -> 뚜렷한 fat tail
+    # Score_total: skewness: -0.823, Excess Kurtosis: 0.575
+
+    # 'High_low_length': 공통적으로 highly skewed(pos) & fat tail -> Yeo-Johnson 변환 -> 왜도/첨도 완화 성공
+    # 'Score_future': 공통적으로 highly skewed(neg) & fat tail -> Yeo-Johnson 변환 -> 왜도/첨도 완화 성공
+    # 'Candle_body_length': 공통적으로 fat tail -> winsorizing 적용 -> 첨도 완화 성공
+
+    print(f"--- Analyzing Normality (Q-Q Plot) for {ticker_name} ---")
+
+    for column in df.columns:
+        if column not in ['Candle_body_length', 'High_low_length', 'Score_past', 'Score_future', 'Score_total']:
+            continue
+        # NaN 제거 (Q-Q Plot: 결측치 있으면 에러 발생)
+        df_temp = df.dropna(subset=[column])
+
+        if len(df_temp[column]) < 2:
+            print("데이터 부족으로 시각화 불가")
+            return
+
+        # 정규성 검정: Jarque-Bera Test
+        # statistic: JB 통계량 (클수록 정규분포와 다름)
+        # p_value: 유의확률 (0.05 미만이면 '정규분포 아님'으로 결론)
+        jb_stat, jb_p_value = jarque_bera(df_temp[column])
+
+        # P-value 해석: 정규성 검증
+        if jb_p_value < 0.05:
+            normality = "Normality rejected (JB test)"
+            color_res = 'red'
+        else:
+            normality = "Normality accepted (JB test)"
+            color_res = 'blue'
+
+        # Q-Q Plot Visualization
+        fig, ax = plt.subplots(figsize=(8, 7))
+
+        # scipy.stats.probplot을 이용해 Q-Q plot 데이터 생성 및 시각화
+        # dist='norm': 정규분포와 비교
+        (osm, osr), (slope, intercept, r) = stats.probplot(df_temp[column], dist="norm", plot=ax)
+
+        # 스타일링
+        ax.get_lines()[0].set_marker('o')  # 데이터 점
+        ax.get_lines()[0].set_markersize(4)
+        ax.get_lines()[0].set_color('#2980b9')
+        ax.get_lines()[0].set_alpha(0.4)
+
+        ax.get_lines()[1].set_color('#c0392b')  # 정규분포 기준선 (빨강)
+        ax.get_lines()[1].set_linewidth(2)
+        ax.get_lines()[1].set_linestyle('--')
+
+        # 타이틀 및 라벨
+        ax.set_title(f'Normality Check : {column} ({ticker_name})', fontsize=15, fontweight='bold', pad=15)
+        ax.set_xlabel('Theoretical Quantiles (Normal)', fontsize=12)
+        ax.set_ylabel(f'{column} Quantiles', fontsize=12)
+        ax.grid(True, alpha=0.3)
+
+        # Result Annotation
+        skewness = stats.skew(df_temp[column])
+        kurtosis = stats.kurtosis(df_temp[column])  # Excess Kurtosis
+
+        stats_text = (
+            f"Skewness : {skewness:.3f}\n"
+            f"Kurtosis : {kurtosis:.3f}\n"
+            f"--------------------\n"
+            f"JB Stat  : {jb_stat:.1f}\n"
+            f"P-value  : {jb_p_value:.1e}\n"
+            f"Result   : {normality}"
+        )
+        print(f"컬럼: {column}\n{stats_text}")
+
+        # 텍스트 박스 추가
+        props = dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor=color_res)
+        ax.text(0.05, 0.95, stats_text, transform=ax.transAxes, fontsize=11,
+                verticalalignment='top', bbox=props, fontfamily='monospace')
+
+        plt.tight_layout()
+        plt.show()
+
+# EDA 6: 피처별 정상성 체크 (ADF Test)
+def check_stationarity_adf(df:pd.DataFrame, ticker_name:str):
+    # 비정상성 피처 리스트
+    # 1. High_low_length (HD현대중공업) -> 차분 적용
+    print(f"--- Running ADF Test for {ticker_name} ---")
+    for column in df.columns:
+        if column not in ['Candle_body_length', 'High_low_length', 'Score_past', 'Score_future', 'Score_total']:
+            continue
+
+        df = df.dropna(subset=[column])
+        # ADF 검증 최소 데이터 개수 확인
+        if len(df[column]) < 10:
+            print("데이터 부족으로 ADF 테스트 불가")
+            return
+
+        # ADF Test Execution
+        result = adfuller(df[column], autolag='AIC') # autolag='AIC': 검정에 필요한 시차(Lag)를 자동으로 결정
+
+        adf_stat = result[0]
+        p_value = result[1]
+
+        # 판정 (p-value 0.05 기준)
+        if p_value < 0.05:
+            verdict = "Stationary"
+            color_res = 'blue'
+        else:
+            verdict = "Non-Stationary"
+            color_res = 'red'
+
+        # Visualization
+        plt.figure(figsize=(10, 5))
+
+        # 시계열 그래프
+        plt.plot(df[column], color='#34495e', linewidth=1, label=column)
+        plt.axhline(0, color='orange', linestyle='--', linewidth=1.5)  # 0 기준선
+
+        # 타이틀
+        plt.title(f'ADF Test Result : {column} ({ticker_name})', fontsize=15, fontweight='bold')
+        plt.xlabel('Date')
+        plt.ylabel(f'{column}')
+        plt.grid(True, alpha=0.3)
+
+        # 4. Result Text Box
+        stats_text = (
+            f"ADF Statistic : {adf_stat:.4f}\n"
+            f"P-value       : {p_value:.4e}\n"
+            f"Used Lags     : {result[2]}\n"
+            f"-----------------------\n"
+            f"Result: {verdict}"
+        )
+        print(f"{column}\n{stats_text}")
+
+        # 텍스트 박스 스타일 (결과에 따라 테두리 색상 변경)
+        props = dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor=color_res, linewidth=2)
+
+        plt.text(0.02, 0.95, stats_text, transform=plt.gca().transAxes, fontsize=11,
+                 verticalalignment='top', bbox=props, fontfamily='monospace')
+
+        plt.legend(loc='upper right')
+        plt.tight_layout()
+        plt.show()
+
 if __name__ == "__main__":
     setup_korean_font()
 
@@ -275,10 +443,10 @@ if __name__ == "__main__":
             continue
 
         # 단기(5일) 예측
-        df = triple_barrier_labeling_volatility(df, 'Close', 5, 20, 1, 1)
+        # df = triple_barrier_labeling_volatility(df, 'Close', 5, 20, 1, 1)
 
         # 장기(20일) 예측
-        # df = triple_barrier_labeling_volatility(df, 'Close', 20, 20, 1, 1)
+        df = triple_barrier_labeling_volatility(df, 'Close', 20, 20, 1, 1)
 
         df = set_features(df)
 
@@ -299,5 +467,21 @@ if __name__ == "__main__":
         # compare_distributions(train_df, ticker_name, 'Score_past', 'Score_future')
 
         # EDA 4: Score_past - Score_future 피처 상관구조 분석
-        check_correlation_two_features(train_df, ticker_name, 'Score_past', 'Score_future')
+        # check_correlation_two_features(train_df, ticker_name, 'Score_past', 'Score_future')
 
+        # EDA 5-1: 피처별 분포 분석 (JB Test)
+        # check_normality_jb(train_df, ticker_name)
+
+        # EDA 5-2: 왜도, 첨도 완화 작업 후 분포 재확인
+        # Yeo-Johnson 변환
+        # pt = PowerTransformer(method='yeo-johnson')
+        # features_to_transform = ['Score_future', 'High_low_length']
+        # train_df.loc[:, features_to_transform] = pt.fit_transform(train_df[features_to_transform])
+        # Winsorizing
+        # winsorize_features = ['Candle_body_length']
+        # for feature in winsorize_features:
+        #     train_df.loc[:, feature] = winsorize(train_df[feature], limits=[0.01, 0.01])  # 임계값 1% ~ 99%
+        # check_normality_jb(train_df, ticker_name)
+
+        # EDA 6: 피처별 정상성 체크 (ADF Test)
+        check_stationarity_adf(train_df, ticker_name)
