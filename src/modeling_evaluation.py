@@ -105,6 +105,17 @@ def compare_feature_set_performance(train_val_df:pd.DataFrame, test_df:pd.DataFr
             'MCC': matthews_corrcoef(y_test, test_preds),
         })
 
+        # Feature Importance 추출 및 출력
+        importances = best_model.feature_importances_
+        # 피처 이름과 매칭하여 데이터프레임 생성
+        feature_importance_df = pd.DataFrame({
+            'Feature': feats,
+            'Importance': importances
+        }).sort_values(by='Importance', ascending=False)
+
+        print(f"\n 🔥 Feature Importances for [{group_name}]:")
+        print(feature_importance_df.to_string(index=False))
+
     res_df = pd.DataFrame(final_results)
 
     # 시각화를 위한 Melt
@@ -170,7 +181,7 @@ if __name__ == "__main__":
         split_idx = int(len(df) * 0.8)
         train_val_df = df.iloc[:split_idx]
         final_test_df = df.iloc[split_idx:]
-        print(train_val_df['Target'].value_counts())
+        # print(train_val_df['Target'].value_counts())
 
         # 예측 기간: 다음날
         predict_duration = 1
