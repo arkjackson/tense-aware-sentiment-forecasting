@@ -6,35 +6,30 @@
 
 ## 1. 연구 배경 및 동기 (Background & Motivation)
 
-**문제 인식**
-
 전통적인 감성 분석 기반 주가 예측 모델은 뉴스 텍스트에서 추출한 감성 점수를 단일 지표로 통합하여 사용한다. 그러나 이는 다음과 같은 한계를 가진다:
 
 - 시간적 정보의 손실: "작년 실적 부진(-), 올해 대규모 수주 예정(+)"과 같이 
   상반된 시제 정보가 혼재된 뉴스의 경우, 단일 점수로는 미묘한 뉘앙스를 포착할 수 없음
 - 시장 효율성 미반영: EMH에 따라 과거 사건과 미래 전망은 시장에 반영되는 속도가 다르나, 기존 모델은 이를 구분하지 않음
 
-### 연구 질문
-**"뉴스 감성 정보를 시제별로 분리하면 주가 예측 성능이 향상되는가?"**
+**연구 질문**: **"뉴스 감성 정보를 시제별로 분리하면 주가 예측 성능이 향상되는가?"**
 
 ---
 
 ## 2. 방법론 (Methodology)
 
-**분석 대상 및 기간**
-
 - 대상: 국내 **방산 섹터** 주요 4개 기업 (HD현대중공업, LIG넥스원, 한국항공우주, 한화시스템)
   - 선정 이유: 수주 기반 산업 특성상 미래 지향적 정보의 중요도가 타 섹터 대비 높음
 - 기간: **2022-01-02 ~ 2024-12-30**
 
-**주요 피처 엔지니어링 (Feature Engineering)**
+**Feature Engineering**
 
 - Common price features
-  * `candle_body_length` = (`Close` − `Open`) / `Open`
-  * `candle_high_low_length` = (`High` − `Low`) / `Close`
+  - `candle_body_length` = (`Close` − `Open`) / `Open`
+  - `candle_high_low_length` = (`High` − `Low`) / `Close`
 
 - Group A (Baseline)
-  * `score_total`: 시제 구분 없이 통합된 전체 감정 지수
+  - `score_total`: 시제 구분 없이 통합된 전체 감정 지수
 
 - Group B (Experimental)
 
@@ -46,29 +41,24 @@
 
    $$ \frac{\sum Future_{pos} - \sum Future_{neg}}{\sum Future_{pos} + \sum Future_{neg}} $$
 
-**실험 설계**
-
 - 수익률 기반 라벨링
   - 1일 후 수익률이 2% 이상: label 1
   - 1일 후 수익률이 2% 미만: label 0
-
-- 2% 임계값 설정 근거:
-  - 거래 비용(증권거래세 + 수수료) 고려 시 실질적 수익 창출 가능 구간
+  - 2% 임계값 설정 근거:
+    - 거래 비용(증권거래세 + 수수료) 고려 시 실질적 수익 창출 가능 구간
 
 **하이퍼파라미터 최적화**
 - 방법: Optuna를 활용하여 피처 그룹별로 최적의 하이퍼파라미터를 독립적으로 탐색
 - 최적화 대상: `n_estimators`, `max_depth`, `learning_rate`, `min_child_weight`
-- 목적 함수: MCC 최대화
+- 목적 함수: MCC(Matthews Correlation Coefficient) 최대화
 
 **평가 지표 (Evaluation Metrics)**
 
-금융 데이터의 특성상 발생하는 클래스 불균형(Class Imbalance) 문제를 고려하여 다음 지표를 핵심 평가지표로 활용:
-
-* **Precision (정밀도)**: 모델이 *상승*으로 예측한 사례 중 실제 상승 비율을 측정하며, 잘못된 매수 신호(False Positive)를 억제하는 능력을 평가
+* **Precision**: 모델이 *상승*으로 예측한 사례 중 실제 상승 비율을 측정하며, 잘못된 매수 신호(False Positive)를 억제하는 능력을 평가
 
 * **F1-Score**: 전반적인 분류 성능을 평가
 
-* **MCC (Matthews Correlation Coefficient)**: 실제 값과 예측 값 사이의 상관 구조를 반영
+* **MCC**: 실제 값과 예측 값 사이의 상관 구조를 반영
 
 ---
 
