@@ -1,62 +1,5 @@
 from sklearn.preprocessing import PowerTransformer
 import pandas as pd
-import numpy as np
-
-def triple_barrier_labeling_volatility(
-    df: pd.DataFrame,
-    close_col: str = 'Close',
-    window: int = 10,
-    volatility_window: int = 20,
-    pt_mult: float = 1.0,
-    sl_mult: float = 1.0,
-    drop_last: bool = True
-) -> pd.DataFrame:
-
-    prices = df[close_col]
-    returns = prices.pct_change()
-
-    # rolling volatility
-    volatility = returns.rolling(volatility_window).std()
-
-    n = len(df)
-    labels = np.full(n, np.nan)
-
-    prices_np = prices.values
-    vol_np = volatility.values
-
-    for t in range(n):
-        if t + 1 >= n:
-            break
-
-        if np.isnan(vol_np[t]):
-            continue  # 변동성 추정 불가 구간 skip
-
-        end = min(t + window, n - 1)
-        p0 = prices_np[t]
-
-        upper_barrier = pt_mult * vol_np[t]
-        lower_barrier = -sl_mult * vol_np[t]
-
-        for j in range(t + 1, end + 1):
-            ret = (prices_np[j] - p0) / p0
-
-            if ret >= upper_barrier:
-                labels[t] = 1   # profit-taking
-                break
-            elif ret <= lower_barrier:
-                labels[t] = 0  # stop-loss
-                break
-
-        if np.isnan(labels[t]):
-            labels[t] = 0  # time barrier hit
-
-    df_out = df.copy()
-    df_out['Target'] = labels
-
-    if drop_last:
-        df_out = df_out.iloc[:-window]
-
-    return df_out
 
 def set_features(df):
     df['Candle_body_length'] = (df['Close'] - df['Open']) / df['Open']
@@ -102,31 +45,33 @@ def clean_dataset(df):
 
     return df
 
-def preprocess_features(train_df:pd.DataFrame, val_df:pd.DataFrame, test_df:pd.DataFrame):
+def preprocess_features(train_df:pd.DataFrame, another_df:pd.DataFrame):
     """피처 전처리 부분입니다."""
     # Yeo-Johnson 변환
     pt = PowerTransformer(method='yeo-johnson')
-    features_to_transform = ['Score_future', 'High_low_length']
-    train_df.loc[:, features_to_transform] = pt.fit_transform(train_df[features_to_transform])
-    val_df.loc[:, features_to_transform] = pt.transform(val_df[features_to_transform])
-    test_df.loc[:, features_to_transform] = pt.transform(test_df[features_to_transform])
-
-    # Winsorizing
+    yeo_johnson_features = ['Score_future', 'High_low_length']
     winsorize_features = ['Candle_body_length']
-    for feature in winsorize_features:
-        # Train 데이터의 1%, 99% 지점의 '실제 값'을 계산
-        lower_bound = train_df[feature].quantile(0.01)
-        upper_bound = train_df[feature].quantile(0.99)
+    for col in train_df.columns:
+        if col in yeo_johnson_features:
+            train_df.loc[:, col] = pt.fit_transform(train_df[[col]]).flatten()
+            another_df.loc[:, col] = pt.transform(another_df[[col]]).flatten()
+        elif col in winsorize_features:
+            # Winsorizing
+            # Train 데이터의 1%, 99% 지점의 '실제 값'을 계산
+            lower_bound = train_df[col].quantile(0.01)
+            upper_bound = train_df[col].quantile(0.99)
+            # Train
+            train_df.loc[:, col] = train_df[col].clip(lower_bound, upper_bound)
+            # Validation / Test
+            another_df.loc[:, col] = another_df[col].clip(lower_bound, upper_bound)
 
-        # Train
-        train_df.loc[:, feature] = train_df[feature].clip(lower_bound, upper_bound)
+    return train_df, another_df
 
-        # Validation / Test
-        val_df.loc[:, feature] = val_df[feature].clip(lower_bound, upper_bound)
-        test_df.loc[:, feature] = test_df[feature].clip(lower_bound, upper_bound)
+def create_return_target(df:pd.DataFrame, threshold=0.01):
+    # 내일의 수익률 계산 (오늘 종가 대비 내일 종가 상승률)
+    df['Next_Return'] = df['Close'].pct_change().shift(-1)
 
-    train_df = clean_dataset(train_df)
-    val_df = clean_dataset(val_df)
-    test_df = clean_dataset(test_df)
+    # 라벨링 (임계값 이상이면 1, 아니면 0)
+    df['Target'] = (df['Next_Return'] >= threshold).astype(int)
 
-    return train_df, val_df, test_df
+    return df
