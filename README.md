@@ -37,13 +37,13 @@
 
 - Group B (Experimental)
 
-  - 과거/현재 시제 감성 점수
+  - 과거/현재 시제 감성 점수 (`score_past`)
 
-  `score_past` = $ \frac{(\sum Past_{pos} + \sum Present_{pos}) - (\sum Past_{neg} + \sum Present_{neg})}{(\sum Past_{pos} + \sum Present_{pos}) + (\sum Past_{neg} + \sum Present_{neg})}$
+   $ \frac{(\sum Past_{pos} + \sum Present_{pos}) - (\sum Past_{neg} + \sum Present_{neg})}{(\sum Past_{pos} + \sum Present_{pos}) + (\sum Past_{neg} + \sum Present_{neg})}$
 
-  - 미래 시제 감성 점수
+  - 미래 시제 감성 점수 (`score_future`)
 
-  `score_future` = $ \frac{\sum Future_{pos} - \sum Future_{neg}}{\sum Future_{pos} + \sum Future_{neg}}$
+   $ \frac{\sum Future_{pos} - \sum Future_{neg}}{\sum Future_{pos} + \sum Future_{neg}}$
 
 ### 실험 설계
 
