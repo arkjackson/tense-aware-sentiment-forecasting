@@ -8,7 +8,7 @@ import seaborn as sns
 import pandas as pd
 import os
 
-from feature_engineering import triple_barrier_labeling_volatility, set_features
+from feature_engineering import set_features ,create_return_target
 from utils import setup_korean_font, load_data
 
 # EDA 1: 시제별 zero ratio 확인
@@ -47,6 +47,24 @@ def check_zero_ratio_by_tense(df:pd.DataFrame, ticker_name:str):
     plt.tight_layout()
 
     plt.show()
+
+    # 결과
+    # --- Analyzing HD현대중공업 ---
+    #     Ticker           Tense  Zero_Ratio
+    # 0  HD현대중공업  Past + Present    0.340136
+    # 1  HD현대중공업          Future    0.510204
+    # --- Analyzing LIG넥스원 ---
+    #    Ticker           Tense  Zero_Ratio
+    # 0  LIG넥스원  Past + Present   10.034014
+    # 1  LIG넥스원          Future   12.585034
+    # --- Analyzing 한국항공우주 ---
+    #    Ticker           Tense  Zero_Ratio
+    # 0  한국항공우주  Past + Present    4.591837
+    # 1  한국항공우주          Future    5.952381
+    # --- Analyzing 한화시스템 ---
+    #   Ticker           Tense  Zero_Ratio
+    # 0  한화시스템  Past + Present    1.360544
+    # 1  한화시스템          Future    1.870748
 
 # EDA 2: 시제별 데이터 비율
 def check_data_ratio_by_tense(df:pd.DataFrame, ticker_name:str):
@@ -100,12 +118,27 @@ def check_data_ratio_by_tense(df:pd.DataFrame, ticker_name:str):
     plt.tight_layout()
     plt.show()
 
+    # 결과
+    # --- Analyzing HD현대중공업 ---
+    #     Ticker  Past + Present     Future
+    # 0  HD현대중공업       71.664598  28.335402
+    # --- Analyzing LIG넥스원 ---
+    #    Ticker  Past + Present     Future
+    # 0  LIG넥스원       68.493274  31.506726
+    # --- Analyzing 한국항공우주 ---
+    #    Ticker  Past + Present     Future
+    # 0  한국항공우주       67.824685  32.175315
+    # --- Analyzing 한화시스템 ---
+    #   Ticker  Past + Present    Future
+    # 0  한화시스템        66.78425  33.21575
+
 # EDA 3: 두 feature 분포 비교
 def compare_distributions(df:pd.DataFrame, ticker_name:str, col1:str, col2:str):
+    # 결과
     # Score_past
-    # var: 0.15 ~ 0.18
+    # var: 0.15 ~ 0.19
     # Score_future
-    # var: 0.13 ~ 0.21
+    # var: 0.13 ~ 0.22
 
     print(f"--- Analyzing {ticker_name} ---")
 
@@ -167,19 +200,19 @@ def compare_distributions(df:pd.DataFrame, ticker_name:str, col1:str, col2:str):
 
 # EDA 4: feature 간의 상관구조 분석
 def check_correlation_two_features(df:pd.DataFrame, ticker_name:str, col1:str, col2:str):
-    # 상관계수 0.45 ~ 0.76 -> 어느정도 경향성이 같기도 하지만, 다른 정보도 상당 부분 존재함.
+    # 상관계수 0.50 ~ 0.77 -> 어느정도 경향성이 같기도 하지만, 다른 정보도 상당 부분 존재함.
     # --- Analyzing HD현대중공업 ---
-    # Correlation Coefficient (r): 0.7689
-    # P-value: 4.5495e-96
+    # Correlation Coefficient (r): 0.7725
+    # P-value: 1.1065e-117
     # --- Analyzing LIG넥스원 ---
-    # Correlation Coefficient (r): 0.4597
-    # P-value: 8.7817e-27
+    # Correlation Coefficient (r): 0.5045
+    # P-value: 2.7214e-39
     # --- Analyzing 한국항공우주 ---
-    # Correlation Coefficient (r): 0.6255
-    # P-value: 3.9395e-54
+    # Correlation Coefficient (r): 0.6275
+    # P-value: 1.1104e-65
     # --- Analyzing 한화시스템 ---
-    # Correlation Coefficient (r): 0.6468
-    # P-value: 6.2419e-59
+    # Correlation Coefficient (r): 0.6547
+    # P-value: 2.9822e-73
 
     print(f"--- Analyzing {ticker_name} ---")
 
@@ -242,29 +275,29 @@ def check_correlation_two_features(df:pd.DataFrame, ticker_name:str, col1:str, c
 def check_normality_jb(df:pd.DataFrame, ticker_name:str):
     """피처별 왜도, 첨도를 분석"""
     # --- Analyzing Normality (Q-Q Plot) for HD현대중공업 ---
-    # Candle_body_length: skewness: 0.316 , Excess Kurtosis: 0.912 -> 약한 fat tail
-    # High_low_length: skewness: 1.298 -> highly skewed(pos), Excess Kurtosis: 2.391 -> 뚜렷한 fat tail
-    # Score_past: skewness: -0.294, Excess Kurtosis: -0.524
-    # Score_future: skewness: -0.487, Excess Kurtosis: -0.241
-    # Score_total: skewness: -0.363, Excess Kurtosis: -0.389
+    # Candle_body_length: skewness: 0.429 , Excess Kurtosis: 0.889
+    # High_low_length: skewness: 1.292 -> highly skewed(pos) -> 0.1, Excess Kurtosis: 2.3329 -> 뚜렷한 fat tail -> -0.626
+    # Score_past: skewness: -0.293, Excess Kurtosis: -0.584
+    # Score_future: skewness: -0.455, Excess Kurtosis: -0.419
+    # Score_total: skewness: -0.350, Excess Kurtosis: -0.517
     # --- Analyzing Normality (Q-Q Plot) for LIG넥스원 ---
-    # Candle_body_length: skewness: -0.265, Excess Kurtosis: 1.27 -> 뚜렷한 fat tail
-    # High_low_length: skewness: 1.54 -> highly skewed(pos), Excess Kurtosis: 3.208 -> highly fat tail
-    # Score_past: skewness: -0.763, Excess Kurtosis: 0.078
-    # Score_future: skewness: -1.295 -> highly skewed(neg), Excess Kurtosis: 1.397 -> 뚜렷한 fat tail
-    # Score_total: skewness: -0.855, Excess Kurtosis: 0.094
+    # Candle_body_length: skewness: -0.049, Excess Kurtosis: 1.43 -> 뚜렷한 fat tail -> 0.376
+    # High_low_length: skewness: 1.59 -> highly skewed(pos) -> 0.134, Excess Kurtosis: 3.67 -> highly fat tail -> -0.661
+    # Score_past: skewness: -0.769, Excess Kurtosis: 0.112
+    # Score_future: skewness: -1.314 -> highly skewed(neg) -> -0.445, Excess Kurtosis: 1.498 -> 뚜렷한 fat tail -> -1.292
+    # Score_total: skewness: -0.901, Excess Kurtosis: 0.279
     # --- Analyzing Normality (Q-Q Plot) for 한국항공우주 ---
-    # Candle_body_length: skewness: -0.415, Excess Kurtosis: 2.404 -> 뚜렷한 fat tail
-    # High_low_length: skewness: 1.770 -> highly skewed(pos), Excess Kurtosis: 5.075 -> highly fat tail
-    # Score_past: skewness: -0.761, Excess Kurtosis: 0.359
-    # Score_future: skewness: -1.318 -> highly skewed(neg), Excess Kurtosis: 1.478 -> 뚜렷한 fat tail
-    # Score_total: skewness: -0.878, Excess Kurtosis: 0.571
+    # Candle_body_length: skewness: -0.295, Excess Kurtosis: 2.365 -> 뚜렷한 fat tail -> 1.123
+    # High_low_length: skewness: 1.767 -> highly skewed(pos) -> 0.135, Excess Kurtosis: 5.023 -> highly fat tail -> -0.55
+    # Score_past: skewness: -0.83, Excess Kurtosis: 0.408
+    # Score_future: skewness: -1.291 -> highly skewed(neg) -> -0.314, Excess Kurtosis: 1.344 -> 뚜렷한 fat tail -> -1.069
+    # Score_total: skewness: -0.954, Excess Kurtosis: 0.701
     # --- Analyzing Normality (Q-Q Plot) for 한화시스템 ---
-    # Candle_body_length: skewness: 0.341, Excess Kurtosis: 3.656 -> highly fat tail
-    # High_low_length: skewness: 2.010 -> highly skewed(pos), Excess Kurtosis: 6.177 -> highly fat tail
-    # Score_past: skewness: -0.715, Excess Kurtosis: 0.281
-    # Score_future: skewness: -1.122 -> highly skewed(neg), Excess Kurtosis: 1.331 -> 뚜렷한 fat tail
-    # Score_total: skewness: -0.823, Excess Kurtosis: 0.575
+    # Candle_body_length: skewness: 0.295, Excess Kurtosis: 3.000 -> highly fat tail
+    # High_low_length: skewness: 1.822 -> highly skewed(pos) -> 0.139, Excess Kurtosis: 4.779 -> highly fat tail -> -0.575
+    # Score_past: skewness: -0.746, Excess Kurtosis: 0.270
+    # Score_future: skewness: -1.141 -> highly skewed(neg) -> -0.261 , Excess Kurtosis: 1.279 -> 뚜렷한 fat tail -> -1.07
+    # Score_total: skewness: -0.856, Excess Kurtosis: 0.575
 
     # 'High_low_length': 공통적으로 highly skewed(pos) & fat tail -> Yeo-Johnson 변환 -> 왜도/첨도 완화 성공
     # 'Score_future': 공통적으로 highly skewed(neg) & fat tail -> Yeo-Johnson 변환 -> 왜도/첨도 완화 성공
@@ -342,8 +375,6 @@ def check_normality_jb(df:pd.DataFrame, ticker_name:str):
 
 # EDA 6: 피처별 정상성 체크 (ADF Test)
 def check_stationarity_adf(df:pd.DataFrame, ticker_name:str):
-    # 비정상성 피처 리스트
-    # 1. High_low_length (HD현대중공업) -> 차분 적용
     print(f"--- Running ADF Test for {ticker_name} ---")
     for column in df.columns:
         if column not in ['Candle_body_length', 'High_low_length', 'Score_past', 'Score_future', 'Score_total']:
@@ -382,7 +413,7 @@ def check_stationarity_adf(df:pd.DataFrame, ticker_name:str):
         plt.ylabel(f'{column}')
         plt.grid(True, alpha=0.3)
 
-        # 4. Result Text Box
+        # Result Text Box
         stats_text = (
             f"ADF Statistic : {adf_stat:.4f}\n"
             f"P-value       : {p_value:.4e}\n"
@@ -415,15 +446,12 @@ if __name__ == "__main__":
             continue
 
         # 단기(5일) 예측
-        # df = triple_barrier_labeling_volatility(df, 'Close', 5, 5, 1, 1)
-
-        # 장기(20일) 예측
-        df = triple_barrier_labeling_volatility(df, 'Close', 20, 20, 1, 1)
+        df = create_return_target(df, 0.02)
 
         df = set_features(df)
 
-        # train / val / test: 70% / 15% / 15%
-        train_end = int(len(df) * 0.7)
+        # train, val / test: 80% / 20%
+        train_end = int(len(df) * 0.8)
         train_df = df.iloc[:train_end]
 
         # ===== EDA 수행 =====
