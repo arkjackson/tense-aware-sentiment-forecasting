@@ -96,7 +96,7 @@ $$
   * `learning_rate`
   * `min_child_weight`
 
-* **목적 함수**: **MCC (Matthews Correlation Coefficient)** 최대화
+* **최적화 목표**: **MCC (Matthews Correlation Coefficient)** 최대화
 
 ---
 
